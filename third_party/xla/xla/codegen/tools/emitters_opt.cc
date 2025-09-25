@@ -42,6 +42,7 @@ limitations under the License.
 #include "xla/codegen/emitters/ir/xla_ops.h"
 #include "xla/codegen/emitters/transforms/pass_pipelines.h"
 #include "xla/codegen/emitters/transforms/passes.h"
+#include "xla/codegen/xtile/ir/xtile_dialect.h"
 #include "xla/mlir_hlo/mhlo/IR/hlo_ops.h"
 #include "xla/service/gpu/gpu_device_info_for_tests.h"
 
@@ -54,7 +55,7 @@ int main(int argc, char** argv) {
       mlir::gpu::GPUDialect, mlir::math::MathDialect, mlir::mhlo::MhloDialect,
       mlir::mhlo::MhloDialect, mlir::scf::SCFDialect,
       mlir::tensor::TensorDialect, mlir::vector::VectorDialect, xla::XlaDialect,
-      xla::cpu::XlaCpuDialect, xla::gpu::XlaGpuDialect>();
+      xla::cpu::XlaCpuDialect, xla::gpu::XlaGpuDialect, xla::XTileDialect>();
   mlir::func::registerAllExtensions(registry);
   mlir::LLVM::registerInlinerInterface(registry);
   mlir::registerCanonicalizerPass();
