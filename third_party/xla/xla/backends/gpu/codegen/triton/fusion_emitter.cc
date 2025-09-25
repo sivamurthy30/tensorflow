@@ -124,6 +124,7 @@ limitations under the License.
 #include "xla/service/gpu/ir_emission_utils.h"
 #include "xla/service/gpu/llvm_gpu_backend/nvptx_libdevice_path.h"
 #include "xla/service/gpu/model/block_level_parameters.h"
+#include "xla/service/gpu/model/experimental/symbolic_expr.h"
 #include "xla/service/gpu/model/triton_emitter_constraints.h"
 #include "xla/service/gpu/triton_fusion_analysis.h"
 #include "xla/service/hlo_module_config.h"
@@ -1739,9 +1740,11 @@ absl::Status EmitGeneric(mlir::OpBuilder builder,
             << ExtractInstructionIntoNewModule(*fusion)->ToString();
   }
   const HloComputation* computation = fusion->fused_instructions_computation();
+  // TODO(karupayun): Fix this.
+  SymbolicExprContext symbolic_expr_context(builder.getContext());
   SymbolicTileAnalysisOrError symbolic_tile_analysis_or =
       SymbolicTileAnalysis::AnalyzeComputation(
-          *computation, builder.getContext(),
+          *computation, &symbolic_expr_context,
           TritonEmitterConstraints::GetBuilder(device_info));
   if (std::holds_alternative<FusionDecision>(symbolic_tile_analysis_or)) {
     return Internal(

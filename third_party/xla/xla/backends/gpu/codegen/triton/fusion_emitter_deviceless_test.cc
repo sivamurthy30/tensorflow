@@ -87,12 +87,12 @@ ENTRY e {
   auto* fusion = Cast<HloFusionInstruction>(
       module->entry_computation()->root_instruction());
 
-  mlir::MLIRContext context;
+  mlir::MLIRContext mlir_context;
   TF_ASSERT_OK_AND_ASSIGN(
       auto triton_module,
       CreateTritonModule("triton_fn", fusion,
                          TestGpuDeviceInfo::RTXA6000DeviceInfo(),
-                         BlockLevelParameters(), context));
+                         BlockLevelParameters(), mlir_context));
 
   std::string annotated_ir = DumpTritonIR(triton_module.get(), true);
 

@@ -32,13 +32,14 @@ namespace xla::gpu {
 namespace {
 
 TEST(TritonStub, CallStubApi) {
-  mlir::MLIRContext context;
+  mlir::MLIRContext mlir_context;
 
-  LoadMlirDialectsForTriton(context);
-  EXPECT_FALSE(TritonWrapper({}, nullptr, {}, {}, {}, nullptr, context).ok());
-  EXPECT_FALSE(CreateTritonModule({}, nullptr, {}, {}, context).ok());
+  LoadMlirDialectsForTriton(mlir_context);
+  EXPECT_FALSE(
+      TritonWrapper({}, nullptr, {}, {}, {}, nullptr, mlir_context).ok());
+  EXPECT_FALSE(CreateTritonModule({}, nullptr, {}, {}, mlir_context).ok());
   EXPECT_FALSE(CompileTritonToLLVM("", HloModule("test", HloModuleConfig()), {},
-                                   {}, {}, nullptr, context,
+                                   {}, {}, nullptr, mlir_context,
                                    /*is_xla_fusion=*/true, {})
                    .ok());
 
