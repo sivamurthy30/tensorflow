@@ -1767,7 +1767,9 @@ namespace {
 // Fixes the AllocationSequence after post-allocation transformation:
 //  1. Remove the allocations with to_be_removed instructions as the defining
 //     positions.
-//  2. Update the vector of uses for all allocations according to the
+//  2. Update the allocations for the replaced instructions. Based on
+//     to_be_replaced, it updates the defining positions.
+//  3. Update the vector of uses for all allocations according to the
 //     update_use_map.
 // Note that to_be_removed instructions will later be removed from the module
 // during SimplifyGraph() call in memory_space_assignment.cc
@@ -1789,6 +1791,24 @@ void FixAllocationSequenceAfterPostAllocationTransformation(
       allocations->end());
 
   // (2)
+  if (!transformation_info.to_be_replaced.empty()) {
+    // We need to update the existing allocations.
+    for (auto& allocation : *allocations) {
+      HloInstruction* defining_instr =
+          allocation->original_defining_position().instruction;
+      if (!defining_instr) {
+        continue;
+      }
+
+      if (transformation_info.to_be_replaced.contains(defining_instr)) {
+        HloPosition position(
+            transformation_info.to_be_replaced.at(defining_instr), {});
+        allocation->set_original_defining_position(position);
+      }
+    }
+  }
+
+  // (3)
   for (auto& allocation : *allocations) {
     std::vector<HloUse> uses_to_update;
     for (const HloUse& use : allocation->uses()) {
@@ -2796,7 +2816,7 @@ absl::StatusOr<HeapSimulator::Result<HloValue>> MsaAlgorithm::Finish() {
                 << instr->ToString();
         TF_ASSIGN_OR_RETURN(PostAllocationTransformationUpdate changes,
                             options_.post_allocation_transformation_fn(instr));
-        if (!changes.to_be_removed.empty()) {
+        if (!changes.to_be_removed.empty() || !changes.to_be_replaced.empty()) {
           VLOG(3) << "Post allocation transformation info: \n"
                   << changes.ToString();
           FixAllocationSequenceAfterPostAllocationTransformation(allocations_,
