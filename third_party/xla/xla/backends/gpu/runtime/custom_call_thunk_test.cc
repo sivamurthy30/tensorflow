@@ -17,12 +17,20 @@ limitations under the License.
 
 #include <cstddef>
 #include <memory>
+#include <string>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include "absl/container/flat_hash_map.h"
+#include "absl/log/check.h"
+#include "absl/status/status.h"
+#include "absl/status/status_matchers.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "xla/backends/gpu/runtime/thunk.h"
 #include "xla/executable_run_options.h"
+#include "xla/ffi/ffi.h"
+#include "xla/ffi/ffi_api.h"
 #include "xla/service/custom_call_status.h"
 #include "xla/service/gpu/buffer_allocations.h"
 #include "xla/service/platform_util.h"
@@ -31,9 +39,7 @@ limitations under the License.
 #include "xla/stream_executor/platform_manager.h"
 #include "xla/stream_executor/stream.h"
 #include "xla/stream_executor/stream_executor_memory_allocator.h"
-#include "tsl/platform/status_matchers.h"
-#include "tsl/platform/statusor.h"
-#include "tsl/platform/test.h"
+#include "xla/tsl/platform/statusor.h"
 
 namespace xla::gpu {
 namespace {
@@ -101,6 +107,42 @@ TEST(CustomCallThunkTest, CustomCallOnCustomStream) {
   thunk->set_execution_stream_id(ExecutionStreamId(1));
   EXPECT_THAT(thunk->ExecuteOnStream(Thunk::ExecuteParams(params)),
               absl_testing::IsOk());
+}
+
+int number_of_calls_to_do_nothing = 0;
+static absl::Status DoNothing() {
+  ++number_of_calls_to_do_nothing;
+  return absl::OkStatus();
+}
+
+XLA_FFI_DEFINE_HANDLER(kDoNothing, DoNothing, ffi::Ffi::Bind(),
+                       {ffi::Traits::kCmdBufferCompatible});
+
+XLA_FFI_REGISTER_HANDLER(ffi::GetXlaFfiApi(), "__xla_test$$do_nothing", "CUDA",
+                         kDoNothing);
+XLA_FFI_REGISTER_HANDLER(ffi::GetXlaFfiApi(), "__xla_test$$do_nothing", "ROCM",
+                         kDoNothing);
+
+TEST(CustomCallThunkTest, SimpleResolvedCustomCall) {
+  TF_ASSERT_OK_AND_ASSIGN(se::StreamExecutor * executor, GpuExecutor());
+  TF_ASSERT_OK_AND_ASSIGN(std::unique_ptr<se::Stream> stream,
+                          executor->CreateStream());
+
+  TF_ASSERT_OK_AND_ASSIGN(
+      auto thunk,
+      CustomCallThunk::Create(Thunk::ThunkInfo(), "__xla_test$$do_nothing",
+                              /*operands=*/{},
+                              /*results=*/{}, /*attributes=*/{},
+                              /*called_computation=*/nullptr,
+                              executor->GetPlatform()->Name()));
+  se::StreamExecutorMemoryAllocator allocator(executor);
+  BufferAllocations buffer_allocations({}, 0, &allocator);
+  Thunk::ExecuteParams params = Thunk::ExecuteParams::Create(
+      ServiceExecutableRunOptions(), buffer_allocations, stream.get(),
+      stream.get(), nullptr, nullptr);
+  EXPECT_THAT(thunk->ExecuteOnStream(Thunk::ExecuteParams(params)),
+              absl_testing::IsOk());
+  EXPECT_EQ(number_of_calls_to_do_nothing, 1);
 }
 
 }  // namespace
