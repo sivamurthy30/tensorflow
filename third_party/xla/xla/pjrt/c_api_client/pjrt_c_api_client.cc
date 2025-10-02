@@ -516,8 +516,15 @@ PjRtCApiClient::CompileAndLoad(mlir::ModuleOp module, CompileOptions options) {
   if (!pjrt_c_api()) llvm::report_fatal_error("pjrt_c_api is null");
 
   std::string version_string = GetPluginStablehloVersionOrDefault(this);
-  TF_ASSIGN_OR_RETURN(std::string serialized,
-                      xla::Serialize(module, version_string));
+  std::string serialized;
+  TF_ASSIGN_OR_RETURN(
+      serialized, xla::Serialize(module, version_string,
+                                 /*inplace=*/options.can_modify_mlir_input));
+  if (options.can_modify_mlir_input) {
+    // If we're allowed to modify the computation, use the opportunity to
+    // relieve memory pressure.
+    module.erase();
+  }
   std::string format(pjrt::kMlirFormat);
   return InitializeArgsAndCompile(this, c_api_, c_client_.get(), options,
                                   serialized, format);

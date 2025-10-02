@@ -83,6 +83,9 @@ struct CompileOptions {
   // The layouts of the arguments that the computation should expect.
   std::optional<std::vector<Shape>> argument_layouts;
 
+  // Allow to modify the input MLIR / XLA program (to save memory)
+  bool can_modify_mlir_input = false;
+
   // If true, the supplied computation expects its arguments to be wrapped in a
   // tuple and passed as a single parameter.
   bool parameter_is_tupled_arguments = false;
