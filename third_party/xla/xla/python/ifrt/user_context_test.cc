@@ -83,8 +83,9 @@ TEST(ChainedUserContextTest, DebugString) {
   UserContextRef chained_context =
       ChainedUserContext::Create({context1, UserContextRef(), context2});
   EXPECT_EQ(chained_context->DebugString(),
-            "TestUserContext(100)\n\n ->\n\n(nullptr user context)\n\n "
-            "->\n\nTestUserContext(200)");
+            "Chained user context (first entry is original source of error): "
+            "{\n\nTestUserContext(100)\n\n ->\n\n(nullptr user context)\n\n "
+            "->\n\nTestUserContext(200)\n\n}");
 }
 
 TEST(FusedUserContextTest, Id) {

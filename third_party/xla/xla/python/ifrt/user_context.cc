@@ -80,12 +80,15 @@ ChainedUserContext::ChainedUserContext(
 UserContextId ChainedUserContext::Id() const { return id_; }
 
 std::string ChainedUserContext::DebugString() const {
-  return absl::StrJoin(
-      user_contexts_, "\n\n ->\n\n",
-      [](std::string* out, const UserContextRef& user_context) {
-        absl::StrAppend(out, (user_context ? user_context->DebugString()
-                                           : "(nullptr user context)"));
-      });
+  return absl::StrCat(
+      "Chained user context (first entry is original source of error): {\n\n",
+      absl::StrJoin(user_contexts_, "\n\n ->\n\n",
+                    [](std::string* out, const UserContextRef& user_context) {
+                      absl::StrAppend(
+                          out, (user_context ? user_context->DebugString()
+                                             : "(nullptr user context)"));
+                    }),
+      "\n\n}");
 }
 
 absl_nonnull UserContextRef
