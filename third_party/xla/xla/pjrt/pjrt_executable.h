@@ -113,7 +113,11 @@ struct CompileOptions {
 
   std::optional<xla::Compiler::TargetConfig> target_config;
 
+  // Allow to modify the input MLIR / XLA program (to save memory)
+  bool can_modify_mlir_input = false;
+
   // Used to indicate the precision configuration.
+  // TODO(450278657): Not serialized into the proto. Should it be?
   PrecisionConfig::Precision matrix_unit_operand_precision =
       PrecisionConfig::DEFAULT;
 
