@@ -211,6 +211,32 @@ ENTRY entry {
       hlo_text, ErrorSpec{/*aabs=*/1e-4, /*arel=*/1e-6}));
 }
 
+TEST_F(TritonEmitterTest, ConvertIntegerToPredIsEmittedCorrectly) {
+  constexpr absl::string_view kHloText = R"(
+HloModule m
+
+fused_convert {
+  p0 = s32[3,2,2]{2,1,0} parameter(0)
+  ROOT convert0 = pred[3,2,2]{2,1,0} convert(p0)
+}
+
+ENTRY %main {
+  p0 = s32[3,2,2]{2,1,0} parameter(0)
+  ROOT input_convert_fusion = pred[3,2,2]{2,1,0} fusion(p0), kind=kCustom,
+    calls=fused_convert,
+    backend_config={"fusion_backend_config":{
+      "kind":"__triton","block_level_fusion_config":{
+        "num_warps":"1","output_tiles":[{"sizes":["1","2","2"]}],"num_ctas":1,
+        "num_stages":1,"is_tma_allowed":false}}}
+}
+)";
+  TF_EXPECT_OK(CreateTritonIrAndFileCheck(this, kHloText, "fused_convert", R"(
+CHECK: %[[CST:.*]] = arith.constant dense<0> 
+CHECK: arith.cmpi ne, %{{.*}}, %[[CST]]
+)"));
+  EXPECT_TRUE(RunAndCompareNoHloPasses(kHloText, kExactMatch));
+}
+
 TEST_F(TritonEmitterTest, PredicateAddIsEmittedCorrectly) {
   constexpr absl::string_view kHloText = R"(
 HloModule m
